@@ -14,7 +14,9 @@
   :group 'unity)
 
 (defcustom unity-code-shim-source-directory
-  (file-name-directory (or (locate-library "unity") load-file-name))
+  (file-name-directory (or (locate-library "unity")
+                           load-file-name
+                           buffer-file-name))
   "Directory containing the code shim source."
   :type 'directory
   :group 'unity)
@@ -43,7 +45,8 @@ See https://docs.microsoft.com/en-us/cpp/build/building-on-the-command-line."
 
 (defun unity--project-path-p (path)
   "Return t if PATH is in a Unity project."
-  (string-match-p "/[Aa]ssets/" path))
+  (let ((case-fold-search t))
+    (if (string-match-p "/assets/" path) t)))
 
 (defun unity--rename-file-advice (file newname &optional ok-if-already-exists)
   "Advice function for `rename-file' for renaming Unity files.
@@ -61,14 +64,14 @@ FILE, NEWNAME, and OK-IF-ALREADY-EXISTS are documented by `rename-file'."
                                   "code.exe"
                                 "code")))
 
-(defun unity--code-source-file ()
-  "Return the file name of the code shim source."
-  (concat unity-code-shim-source-directory
-          (if (eq system-type 'windows-nt)
-              "code-windows.c"
-            "code-unix.c")))
+(defun unity--build-code-shim-unix (subprocess-buffer)
+  "Build the code shim on Unix and output to SUBPROCESS-BUFFER."
+  (call-process unity-cc nil subprocess-buffer nil
+                "-O2" (expand-file-name "code-unix.c"
+                                        unity-code-shim-source-directory)
+                "-o" (unity--code-binary-file)))
 
-(defun unity--build-code-shim-call-process-windows (subprocess-buffer)
+(defun unity--build-code-shim-windows (subprocess-buffer)
   "Build the code shim on Windows and output to SUBPROCESS-BUFFER."
   (let ((temp-script (make-temp-file "emacs-unity" nil ".bat"))
         (temp-object (make-temp-file "emacs-unity" nil ".obj")))
@@ -88,7 +91,8 @@ cl /nologo /O2 \"%s\" /Fo\"%s\" /Fe\"%s\" user32.lib shlwapi.lib || exit /b 1"
               unity-vcvarsall-arch
               ;; cl.
               (convert-standard-filename
-               (expand-file-name (unity--code-source-file)))
+               (expand-file-name "code-windows.c"
+                                 unity-code-shim-source-directory))
               (convert-standard-filename
                (expand-file-name temp-object))
               (convert-standard-filename
@@ -99,40 +103,29 @@ cl /nologo /O2 \"%s\" /Fo\"%s\" /Fe\"%s\" user32.lib shlwapi.lib || exit /b 1"
         (delete-file temp-script)
         (delete-file temp-object)))))
 
-(defun unity--build-code-shim-call-process-unix (subprocess-buffer)
-  "Build the code shim on Unix and output to SUBPROCESS-BUFFER."
-  (call-process unity-cc nil subprocess-buffer nil
-                "-O2" (unity--code-source-file) "-o" (unity--code-binary-file)))
+(defun unity-build-code-shim (&optional force-rebuild)
+  "Build the code shim.
 
-(defun unity--build-code-shim ()
-  "Build the code shim."
-  (make-directory unity-var-directory t)
-  (when (get-buffer "*unity-subprocess*")
-    (kill-buffer "*unity-subprocess*"))
-  (let ((subprocess-buffer (get-buffer-create "*unity-subprocess*")))
-    (if (eq (if (eq system-type 'windows-nt)
-                (unity--build-code-shim-call-process-windows subprocess-buffer)
-              (unity--build-code-shim-call-process-unix subprocess-buffer))
-            0)
+This function is a no-op if the code shim is already built unless
+FORCE-REBUILD is t. This argument is always t when invoked
+interactively."
+  (interactive '(t))
+  (when (or (not (file-exists-p (unity--code-binary-file)))
+            force-rebuild)
+    (make-directory unity-var-directory t)
+    (when (get-buffer "*unity-subprocess*")
+      (kill-buffer "*unity-subprocess*"))
+    (let ((subprocess-buffer (get-buffer-create "*unity-subprocess*")))
+      (if (eq (if (eq system-type 'windows-nt)
+                  (unity--build-code-shim-windows subprocess-buffer)
+                (unity--build-code-shim-unix subprocess-buffer))
+              0)
+          (progn
+            (kill-buffer subprocess-buffer)
+            (message "Unity code shim built successfully."))
         (progn
-          (kill-buffer subprocess-buffer)
-          (message "Unity code shim built successfully."))
-      (progn
-        (switch-to-buffer-other-window subprocess-buffer)
-        (special-mode)))))
-
-(defun unity-build-code-shim ()
-  "Build the code shim if it's not already built."
-  (interactive)
-  (unless (file-exists-p (unity--code-binary-file))
-    (unity--build-code-shim)))
-
-(defun unity-rebuild-code-shim ()
-  "Force rebuild the code shim."
-  (interactive)
-  (when (file-exists-p (unity--code-binary-file))
-    (delete-file (unity--code-binary-file)))
-  (unity--build-code-shim))
+          (switch-to-buffer-other-window subprocess-buffer)
+          (special-mode))))))
 
 (defun unity-setup ()
   "Activate Unity.el integration."
