@@ -1,5 +1,23 @@
 ;;; unity.el --- Unity integration for Emacs -*- lexical-binding:t -*-
+
+;; Version: 0.1.0
+;; Author: Eliza Velasquez
+;; Created: 30 May 2021
+;; Keywords: unity
+;; URL: https://github.com/elizagamedev/unity.el
+
 ;;; Commentary:
+
+;; This package provides some Emacs integration with the Unity game engine.
+;; Most notably, it provides the ability to open source files from Unity in
+;; Emacs or Emacsclient while still generating the solution and project files
+;; for use with `lsp-mode'.
+;;
+;; Additionally, this package can install hooks/advice for smoother interop with
+;; certain Unity quirks.
+;;
+;; See README.md for more information.
+
 ;;; Code:
 
 (defgroup unity nil
