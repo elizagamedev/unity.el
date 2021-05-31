@@ -10,7 +10,13 @@
   (expand-file-name (convert-standard-filename "var/unity/")
                     user-emacs-directory)
   "Directory for persistent data."
-  :type 'string
+  :type 'directory
+  :group 'unity)
+
+(defcustom unity-code-shim-source-directory
+  (file-name-directory (or (locate-library "unity") load-file-name))
+  "Directory containing the code shim source."
+  :type 'directory
   :group 'unity)
 
 (defcustom unity-cc
@@ -19,11 +25,21 @@
   :type 'string
   :group 'unity)
 
-(defun unity--code-binary-file ()
-  "Return the file name of the code shim."
-  (concat unity-var-directory (if (eq system-type 'windows-nt)
-                                  "code.exe"
-                                "code")))
+(defcustom unity-vcvarsall-file
+  "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Auxiliary/Build/vcvarsall.bat"
+  "Location of vcvarsall.bat on Windows.
+
+See https://docs.microsoft.com/en-us/cpp/build/building-on-the-command-line."
+  :type 'file
+  :group 'unity)
+
+(defcustom unity-vcvarsall-arch
+  "x64"
+  "Target architecture of vcvarsall.bat.
+
+See https://docs.microsoft.com/en-us/cpp/build/building-on-the-command-line."
+  :type 'string
+  :group 'unity)
 
 (defun unity--project-path-p (path)
   "Return t if PATH is in a Unity project."
@@ -39,19 +55,64 @@ FILE, NEWNAME, and OK-IF-ALREADY-EXISTS are documented by `rename-file'."
         (rename-file meta-file (concat newname ".meta")
                      ok-if-already-exists)))))
 
+(defun unity--code-binary-file ()
+  "Return the file name of the code shim binary."
+  (concat unity-var-directory (if (eq system-type 'windows-nt)
+                                  "code.exe"
+                                "code")))
+
+(defun unity--code-source-file ()
+  "Return the file name of the code shim source."
+  (concat unity-code-shim-source-directory
+          (if (eq system-type 'windows-nt)
+              "code-windows.c"
+            "code-unix.c")))
+
+(defun unity--build-code-shim-call-process-windows (subprocess-buffer)
+  "Build the code shim on Windows and output to SUBPROCESS-BUFFER."
+  (let ((temp-script (make-temp-file "emacs-unity" nil ".bat"))
+        (temp-object (make-temp-file "emacs-unity" nil ".obj")))
+    (unwind-protect
+        (progn
+          (with-temp-file temp-script
+            (setq-local buffer-file-coding-system 'utf-8)
+            (insert
+             (format
+              "chcp 65001
+call \"%s\" %s || exit /b 1
+@echo on
+cl /nologo /O2 \"%s\" /Fo\"%s\" /Fe\"%s\" user32.lib shlwapi.lib || exit /b 1"
+              ;; call vcvarsall.bat.
+              (convert-standard-filename
+               (expand-file-name unity-vcvarsall-file))
+              unity-vcvarsall-arch
+              ;; cl.
+              (convert-standard-filename
+               (expand-file-name (unity--code-source-file)))
+              (convert-standard-filename
+               (expand-file-name temp-object))
+              (convert-standard-filename
+               (expand-file-name (unity--code-binary-file))))))
+          (call-process "cmd" nil subprocess-buffer nil
+                        "/c" temp-script))
+      (progn
+        (delete-file temp-script)
+        (delete-file temp-object)))))
+
+(defun unity--build-code-shim-call-process-unix (subprocess-buffer)
+  "Build the code shim on Unix and output to SUBPROCESS-BUFFER."
+  (call-process unity-cc nil subprocess-buffer nil
+                "-O2" (unity--code-source-file) "-o" (unity--code-binary-file)))
+
 (defun unity--build-code-shim ()
   "Build the code shim."
   (make-directory unity-var-directory t)
   (when (get-buffer "*unity-subprocess*")
     (kill-buffer "*unity-subprocess*"))
-  (let ((subprocess-buffer (get-buffer-create "*unity-subprocess*"))
-        (source-name
-         (concat (file-name-directory (or load-file-name buffer-file-name))
-                 (if (eq system-type 'windows-nt)
-                     "code-windows.c"
-                   "code-unix.c"))))
-    (if (eq (call-process unity-cc nil subprocess-buffer nil
-                          source-name "-o" (unity--code-binary-file))
+  (let ((subprocess-buffer (get-buffer-create "*unity-subprocess*")))
+    (if (eq (if (eq system-type 'windows-nt)
+                (unity--build-code-shim-call-process-windows subprocess-buffer)
+              (unity--build-code-shim-call-process-unix subprocess-buffer))
             0)
         (progn
           (kill-buffer subprocess-buffer)
@@ -62,11 +123,13 @@ FILE, NEWNAME, and OK-IF-ALREADY-EXISTS are documented by `rename-file'."
 
 (defun unity-build-code-shim ()
   "Build the code shim if it's not already built."
+  (interactive)
   (unless (file-exists-p (unity--code-binary-file))
-    (unity-build-code-shim)))
+    (unity--build-code-shim)))
 
 (defun unity-rebuild-code-shim ()
   "Force rebuild the code shim."
+  (interactive)
   (when (file-exists-p (unity--code-binary-file))
     (delete-file (unity--code-binary-file)))
   (unity--build-code-shim))
