@@ -6,7 +6,9 @@ Emacsclient while still generating the solution and project files for use with
 `lsp-mode`.
 
 Additionally, this package can install hooks/advice for smoother interop with
-certain Unity quirks.
+certain Unity quirks. **Note that these (optional) integrations are experimental
+and potentially destructive**; see the `unity-setup` section for more
+information.
 
 ## Installation
 
@@ -56,5 +58,10 @@ emacsclient -n +$(Line):$(Column) $(File)
 ### `unity-setup`
 
 This function installs any hooks, advice, etc. necessary for smoother
-Emacs/Unity interop. Currently this is limited to advising `rename-file` so that
-`.meta` files are automatically moved alongside their associated files.
+Emacs/Unity interop. Currently this is limited to advising `rename-file` and
+`delete-file` so that `.meta` files are automatically moved and deleted
+alongside their associated files.
+
+While it's unlikely that there are any disasterous bugs lurking in the advice
+functions, given that these are destructive operations, *please be mindful* if
+you are calling `unity-setup`. Always use revision control.

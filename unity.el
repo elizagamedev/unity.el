@@ -1,6 +1,6 @@
 ;;; unity.el --- Unity integration for Emacs -*- lexical-binding:t -*-
 
-;; Version: 0.1.0
+;; Version: 0.1.1
 ;; Author: Eliza Velasquez
 ;; Created: 30 May 2021
 ;; Keywords: unity
@@ -70,11 +70,21 @@ See https://docs.microsoft.com/en-us/cpp/build/building-on-the-command-line."
   "Advice function for `rename-file' for renaming Unity files.
 
 FILE, NEWNAME, and OK-IF-ALREADY-EXISTS are documented by `rename-file'."
-  (when (unity--project-path-p file)
+  (when (and (unity--project-path-p file)
+             (unity--project-path-p newname))
     (let ((meta-file (concat file ".meta")))
       (when (file-exists-p meta-file)
         (rename-file meta-file (concat newname ".meta")
                      ok-if-already-exists)))))
+
+(defun unity--delete-file-advice (file &optional trash)
+  "Advice function for `delete-file' for deleting Unity files.
+
+FILE and TRASH are documented by `rename-file'."
+  (when (unity--project-path-p file)
+    (let ((meta-file (concat file ".meta")))
+      (when (file-exists-p meta-file)
+        (delete-file meta-file trash)))))
 
 (defun unity--code-binary-file ()
   "Return the file name of the code shim binary."
@@ -148,7 +158,8 @@ interactively."
 (defun unity-setup ()
   "Activate Unity.el integration."
   (interactive)
-  (advice-add #'rename-file :after #'unity--rename-file-advice))
+  (advice-add #'rename-file :after #'unity--rename-file-advice)
+  (advice-add #'delete-file :after #'unity--delete-file-advice))
 
 (provide 'unity)
 
