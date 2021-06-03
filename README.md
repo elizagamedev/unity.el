@@ -16,7 +16,7 @@ Currently, this package is not on M?ELPA. In the meantime, please clone and
 extend your load path. For example:
 
 ```elisp
-(use-package 'unity
+(use-package unity
   :load-path "site-lisp/unity.el"
   :config
   (unity-build-code-shim)
