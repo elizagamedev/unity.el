@@ -13,14 +13,14 @@ information.
 ## Installation
 
 Currently, this package is not on M?ELPA. In the meantime, please clone and
-extend your load path. For example:
+extend your load path. I recommend
+[straight.el](https://github.com/raxod502/straight.el). For example:
 
 ```elisp
-(use-package unity
-  :load-path "site-lisp/unity.el"
-  :config
-  (unity-build-code-shim)
-  (unity-setup))
+(straight-use-package
+ '(unity :type git :host github :repo "elizagamedev/unity.el"))
+(add-hook 'after-init-hook #'unity-build-code-shim)
+(add-hook 'after-init-hook #'unity-setup)
 ```
 
 ## Configuration

@@ -1,6 +1,6 @@
 ;;; unity.el --- Unity integration for Emacs -*- lexical-binding:t -*-
 
-;; Version: 0.1.1
+;; Version: 0.1.2
 ;; Author: Eliza Velasquez
 ;; Created: 30 May 2021
 ;; Keywords: unity
@@ -131,6 +131,7 @@ cl /nologo /O2 \"%s\" /Fo\"%s\" /Fe\"%s\" user32.lib shlwapi.lib || exit /b 1"
         (delete-file temp-script)
         (delete-file temp-object)))))
 
+;;;###autoload
 (defun unity-build-code-shim (&optional force-rebuild)
   "Build the code shim.
 
@@ -155,6 +156,7 @@ interactively."
           (switch-to-buffer-other-window subprocess-buffer)
           (special-mode))))))
 
+;;;###autoload
 (defun unity-setup ()
   "Activate Unity.el integration."
   (interactive)
