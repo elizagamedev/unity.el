@@ -18,7 +18,8 @@ extend your load path. I recommend
 
 ```elisp
 (straight-use-package
- '(unity :type git :host github :repo "elizagamedev/unity.el"))
+ '(unity :type git :host github :repo "elizagamedev/unity.el"
+         :files ("*.el" "*.c")))
 (add-hook 'after-init-hook #'unity-build-code-shim)
 (add-hook 'after-init-hook #'unity-setup)
 ```
