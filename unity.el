@@ -90,7 +90,9 @@ FILE and TRASH are documented by `rename-file'."
   "Return the file name of the code shim binary."
   (concat unity-var-directory (if (eq system-type 'windows-nt)
                                   "code.exe"
-                                "code")))
+                                (if (eq system-type 'darwin)
+                                    "code.app"
+                                "code"))))
 
 (defun unity--build-code-shim-unix (subprocess-buffer)
   "Build the code shim on Unix and output to SUBPROCESS-BUFFER."
