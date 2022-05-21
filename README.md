@@ -56,7 +56,9 @@ adjust the "External Script Editor Args" arguments as such to run `emacsclient`
 emacsclient -n +$(Line):$(Column) $(File)
 ```
 
-On some platforms like MacOs, Unity may not be inherit your base PATH when running the shim. If the editor is not launching as expected you should use absolute paths. In the "External Script Editor Args" like:
+On some platforms like macOS, Unity may not be inherit your base PATH when
+running the shim. If the editor is not launching as expected you should use an
+absolute path. An example of "External Script Editor Args" might look like:
 
 ```sh
 /usr/local/bin/emacsclient -n +$(Line):$(Column) $(File)
