@@ -1,14 +1,14 @@
 # unity.el
 
-This package provides some Emacs integration with the Unity game engine. Most
-notably, it provides the ability to open source files from Unity in Emacs or
-Emacsclient while still generating the solution and project files for use with
-`lsp-mode`.
+This package provides some Emacs integration with the Unity game engine. It
+installs hooks/advice for smoother interop with certain Unity quirks. It's
+intended to be used along-side
+[rider2emacs](https://github.com/elizagamedev/rider2emacs) so that Unity will
+open source files in Emacs and generate the appropriate solution/project files
+necessary for LSP integration.
 
-Additionally, this package can install hooks/advice for smoother interop with
-certain Unity quirks. **Note that these (optional) integrations are experimental
-and potentially destructive**; see the `unity-setup` section for more
-information.
+**Note that these integrations are potentially destructive**; see the
+`unity-mode` section for more information.
 
 ## Installation
 
@@ -18,17 +18,35 @@ extend your load path. I recommend
 
 ```elisp
 (straight-use-package
- '(unity :type git :host github :repo "elizagamedev/unity.el"
-         :files ("*.el" "*.c")))
-(add-hook 'after-init-hook #'unity-build-code-shim)
-(add-hook 'after-init-hook #'unity-setup)
+ '(unity :type git :host github :repo "elizagamedev/unity.el"))
+(add-hook 'after-init-hook #'unity-mode)
 ```
 
-## Configuration
+## Usage
 
-`unity.el` exposes two functions, `unity-build-code-shim` and `unity-setup`.
+### `unity-mode`
 
-### `unity-build-code-shim`
+When active, this mode installs hooks, advice, etc. necessary for smoother
+Emacs/Unity interop. Currently this is limited to advising `rename-file` and
+`delete-file` so that `.meta` files are automatically moved and deleted
+alongside their associated files.
+
+While it's unlikely that there are any disasterous bugs lurking in the advice
+functions, given that these are destructive operations, *please be mindful* if
+you are enabling `unity-mode`. Always use revision control.
+
+### `rider2emacs`
+
+unity.el is intended to be used alongside
+[rider2emacs](https://github.com/elizagamedev/rider2emacs), which provides Unity
+with the ability to open files in Emacs and generate project files for use with
+OmniSharp LSP. See its documentation for details.
+
+### `unity-build-code-shim` (Obsolete)
+
+*The functionality described in this section has been superseded with
+[rider2emacs](https://github.com/elizagamedev/rider2emacs), but is left here in
+its original text for posterity.*
 
 Unity does not generate project or solution files unless the external text
 editor is recognized as Visual Studio, Visual Studio Code, or MonoDevelop.
@@ -63,14 +81,3 @@ absolute path. An example of "External Script Editor Args" might look like:
 ```sh
 /usr/local/bin/emacsclient -n +$(Line):$(Column) $(File)
 ```
-
-### `unity-setup`
-
-This function installs any hooks, advice, etc. necessary for smoother
-Emacs/Unity interop. Currently this is limited to advising `rename-file` and
-`delete-file` so that `.meta` files are automatically moved and deleted
-alongside their associated files.
-
-While it's unlikely that there are any disasterous bugs lurking in the advice
-functions, given that these are destructive operations, *please be mindful* if
-you are calling `unity-setup`. Always use revision control.
